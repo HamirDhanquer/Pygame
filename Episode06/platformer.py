@@ -1,8 +1,14 @@
 import pygame, sys
-import os 
+import os, random  
 from pygame import display
+from pygame import transform
 from pygame.display import set_caption
 from pygame.locals import *
+
+# Trilha de Estudos: Game Developer
+# 1) My class: Pygame Tutorial Series (all) 03/32. 
+# Current: Aula 03 - 15:00 Min 
+# https://www.youtube.com/watch?v=Qdeb1iinNtk&list=PLX5fBCkxJmm3nAalPU6gGfRIFLlghRuYy&index=2
 
 # Funções Utilizadas no Episodio
 def collision_test( rect, tiles ):
@@ -50,8 +56,36 @@ def load_map(path):
         game_map.append(list(row))
 
     return game_map
+         
 
+global animation_frames
+animation_frames = {}
+def load_animation( path, frame_durations ):
+    global animation_frames
+    animation_name = path.split('/')[-1]
+    animation_frame_data = []
+    n = 0 
+    for frame in frame_durations:
+        animation_frame_id = animation_name + '_' + str(n)
+        img_loc = path + '/' + animation_frame_id + '.png'
 
+        animation_image = pygame.image.load(img_loc).convert()
+        animation_image.set_colorkey((255,255,255))
+        animation_frames[ animation_frame_id ] = animation_image.copy()
+
+        for i in range(frame):
+            animation_frame_data.append( animation_frame_id )
+
+        n += 1
+    return animation_frame_data
+
+def change_action( action_var, frame, new_value ):
+    if action_var != new_value:
+        action_var = new_value
+        frame = 0
+    return action_var, frame
+
+pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init() #Inicializar o Pygame. 
 
 Clock = pygame.time.Clock() #Indica o tempo 
@@ -62,15 +96,40 @@ screen = pygame.display.set_mode(WINDOW_SIZE, 0,32) #
 
 display = pygame.Surface((300, 200))
 
-player_image = pygame.image.load('assets/player.png')
+dirAtual = os.getcwd() + '\\Episode06\\assets\\'
+#print( dirAtual )
+
+#player_image = pygame.image.load( r'D:\Projects\Pygame\Episode05\assets\player.png')
+#player_image = pygame.image.load( 'assets/player.png')
+player_image = pygame.image.load( os.path.join( dirAtual, 'player.png'))
 player_image.set_colorkey((255,255,255))
 
-grass_image = pygame.image.load(os.path.join('assets/','grass.png'))
+grass_image = pygame.image.load(os.path.join(dirAtual,'grass.png'))
 TILE_SIZE = grass_image.get_width()
-dirt_image = pygame.image.load(os.path.join('assets/','dirt.png'))
+dirt_image = pygame.image.load(os.path.join(dirAtual,'dirt.png'))
+
+animation_database = {}
+animation_database['run'] = load_animation(os.path.join(dirAtual, 'player_animations/run'),[7,7])
+animation_database['idle'] = load_animation(os.path.join(dirAtual,'player_animations/idle'),[7,7,40])
+
+jump_sound = pygame.mixer.Sound( os.path.join( dirAtual, 'jump.wav') )
+grass_sounds = [pygame.mixer.Sound( os.path.join( dirAtual, 'grass_0.wav' ) ), 
+                pygame.mixer.Sound( os.path.join( dirAtual, 'grass_1.wav' ) )]
+grass_sounds[0].set_volume(0.2)
+grass_sounds[1].set_volume(0.2)
+
+pygame.mixer.music.load( os.path.join( dirAtual,'music.wav' ) )
+pygame.mixer.music.play( -1 )
+grass_sound_timer = 0
+
+player_action = 'idle'
+player_frame = 0
+player_flip = False
 
 true_scroll = [0,0]
-game_map = load_map('assets/map')
+
+game_map = load_map(os.path.join(dirAtual,'map'))
+
 player_location = [50,50]
 moving_right = False 
 moving_left = False
@@ -86,6 +145,10 @@ background_objects = [[0.25,[120,10,70,400]],[0.25,[280,30,40,400]],[0.5,[30,40,
 #Loop do Game 
 while True:
     display.fill((146,244,255))
+
+    if grass_sound_timer > 0:
+        grass_sound_timer -= 1
+
 
 # Camera 
     true_scroll[0] += (player_rect.x - true_scroll[0] - 152) /20
@@ -106,6 +169,7 @@ while True:
         else:
             pygame.draw.rect(display, (9,91,85), obj_rect)
 
+
 # Eventos do Game: 
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -113,6 +177,10 @@ while True:
             sys.exit()
 
         if event.type == KEYDOWN:
+            if event.key == K_w:
+                pygame.mixer.music.fadeout(1000)
+            if event.key == K_e:
+                pygame.mixer.music.play(-1)
             if event.key == K_RIGHT:
                 moving_right = True
             if event.key == K_LEFT:
@@ -120,6 +188,7 @@ while True:
             if event.key == K_UP:
                 #player_y_momentum = -5 
                 if air_timer < 6:
+                    jump_sound.play()
                     player_y_momentum = -5
         
         if event.type == KEYUP:
@@ -157,14 +226,38 @@ while True:
     if player_y_momentum > 3:
         player_y_momentum = 3
 
+    if player_movement[0] > 0:
+        player_action,player_frame = change_action( player_action, player_frame, 'run' )
+        player_flip = False
+    
+    if player_movement[0] == 0:
+        player_action,player_frame = change_action( player_action, player_frame, 'idle' )
+
+    
+    if player_movement[0] < 0:
+        player_action,player_frame = change_action( player_action, player_frame, 'run' )
+        player_flip = True
+
     player_rect, collisions = move( player_rect, player_movement, tile_rects )
     if collisions['bottom']:
         player_y_momentum = 0
         air_timer = 0
+        if player_movement[0] != 0:
+            if grass_sound_timer == 0:
+                grass_sound_timer = 30 
+                random.choice( grass_sounds ).play()
     else:
         air_timer += 1
     
-    display.blit( player_image, (player_rect.x - scroll[0], player_rect.y - scroll[1]) )
+
+    player_frame += 1
+    if player_frame >= len( animation_database[ player_action ] ):
+        player_frame = 0
+    player_img_id = animation_database[ player_action ][ player_frame ]
+    
+    player_image = animation_frames[player_img_id]
+    display.blit( pygame.transform.flip( player_image, player_flip, False), (player_rect.x - scroll[0], player_rect.y - scroll[1]) )
+
 
     surf = pygame.transform.scale(display, WINDOW_SIZE)
     screen.blit(surf,(0,0))
