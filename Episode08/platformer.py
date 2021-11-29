@@ -1,10 +1,10 @@
 import pygame, sys
-import os, random 
-import data.engine as e  
+import os, random  
 from pygame import display
 from pygame import transform
 from pygame.display import set_caption
 from pygame.locals import *
+import data.engine as e
 
 # Trilha de Estudos: Game Developer
 # 1) My class: Pygame Tutorial Series (all) 03/32. 
@@ -31,10 +31,10 @@ def generate_chunk(x,y):
             if tile_type != 0: 
                 chunk_data.append( [[ target_x, target_y ], tile_type] )
     return chunk_data
-            
-dirEntities = os.getcwd() + '\\Episode08\\data\\images\\entities\\'
 
-e.load_animations( dirEntities )
+dir_entities = os.getcwd() + '\\data\\images\\entities\\'   
+print(dir_entities)         
+e.load_animations(dir_entities)
 
 pygame.mixer.pre_init(44100, -16, 2, 512)
 pygame.init() #Inicializar o Pygame. 
@@ -47,41 +47,34 @@ screen = pygame.display.set_mode(WINDOW_SIZE, 0,32) #
 
 display = pygame.Surface((300, 200))
 
-dirImages = os.getcwd() + '\\Episode08\\data\\images\\'
-dirAudio = os.getcwd() + '\\Episode08\\data\\audio\\'
-#print( dirAtual )
+dir_images = os.getcwd() + '\\data\\images\\'
+dir_audio = os.getcwd() + '\\data\\audio\\'
+print( 'Aqui é o ' + dir_images )
 
 #player_image = pygame.image.load( r'D:\Projects\Pygame\Episode05\assets\player.png')
 #player_image = pygame.image.load( 'assets/player.png')
-player_image = pygame.image.load( os.path.join( dirImages, 'player.png'))
+player_image = pygame.image.load( os.path.join( dir_images, 'player.png'))
 player_image.set_colorkey((255,255,255))
 
-grass_image = pygame.image.load(os.path.join(dirImages,'grass.png'))
+grass_image = pygame.image.load(os.path.join(dir_images,'grass.png'))
 TILE_SIZE = grass_image.get_width()
-dirt_image = pygame.image.load(os.path.join(dirImages,'dirt.png'))
-plant_image = pygame.image.load( os.path.join( dirImages, 'plant.png' ) ).convert()
+dirt_image = pygame.image.load(os.path.join(dir_images,'dirt.png'))
+plant_image = pygame.image.load( os.path.join( dir_images, 'plant.png' ) ).convert()
 plant_image.set_colorkey( (255,255,255) )
 
 tile_index = {  1:grass_image,
                 2:dirt_image,
                 3:plant_image}
 
-animation_database = {}
-animation_database['run'] = load_animation(os.path.join(dirAtual, 'player_animations/run'),[7,7])
-animation_database['idle'] = load_animation(os.path.join(dirAtual,'player_animations/idle'),[7,7,40])
-
-jump_sound = pygame.mixer.Sound( os.path.join( dirAudio, 'jump.wav') )
-grass_sounds = [pygame.mixer.Sound( os.path.join( dirAudio, 'grass_0.wav' ) ), 
-                pygame.mixer.Sound( os.path.join( dirAudio, 'grass_1.wav' ) )]
+jump_sound = pygame.mixer.Sound( os.path.join( dir_audio, 'jump.wav') )
+grass_sounds = [pygame.mixer.Sound( os.path.join( dir_audio, 'grass_0.wav' ) ), 
+                pygame.mixer.Sound( os.path.join( dir_audio, 'grass_1.wav' ) )]
 grass_sounds[0].set_volume(0.2)
 grass_sounds[1].set_volume(0.2)
 
-pygame.mixer.music.load( os.path.join( dirAudio,'music.wav' ) )
+pygame.mixer.music.load( os.path.join( dir_audio,'music.wav' ) )
 pygame.mixer.music.play( -1 )
 grass_sound_timer = 0
-
-player_rect = pygame.Rect(100,100,5,13)
-player = e.entity(100,100,5,13,'player')
 
 true_scroll = [0,0]
 
@@ -94,8 +87,9 @@ moving_left = False
 player_y_momentum = 0
 air_timer = 0
 
-player_rect = pygame.Rect( 50, 50, player_image.get_width(), player_image.get_height() )
-test_rect = pygame.Rect(100,100,100,50)
+player = e.entity(100,100,5,13,'player')
+#player_rect = pygame.Rect( 50, 50, player_image.get_width(), player_image.get_height() )
+#test_rect = pygame.Rect(100,100,100,50)
 
 background_objects = [[0.25,[120,10,70,400]],[0.25,[280,30,40,400]],[0.5,[30,40,40,400]],[0.5,[130,90,100,400]],[0.5,[300,80,120,400]]]
 
@@ -109,8 +103,8 @@ while True:
 
 
 # Camera 
-    true_scroll[0] += (player_rect.x - true_scroll[0] - 152) /20
-    true_scroll[1] += ( player_rect.y - true_scroll[1] -106 ) /20
+    true_scroll[0] += (player.x - true_scroll[0] - 152) /20
+    true_scroll[1] += ( player.y - true_scroll[1] -106 ) /20
     scroll = true_scroll.copy()
     scroll[0] = int( scroll[0] )
     scroll[1] = int( scroll[1] )
@@ -168,23 +162,6 @@ while True:
             if event.key == K_LEFT:
                 moving_left = False
 
-# Carregar o Mapa 
-    '''  
-    tile_rects = []
-    y = 0
-    for row in game_map:
-        x= 0
-        for tile in row:
-            x += 1
-            if tile == '1':
-                display.blit(dirt_image, (x * TILE_SIZE - scroll[0], y * TILE_SIZE - scroll[1]))
-            if tile == '2':
-                display.blit(grass_image,(x * TILE_SIZE - scroll[0], y * TILE_SIZE - scroll[1]))
-            if tile != '0':
-                tile_rects.append(pygame.Rect( x* TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE))
-            x += 1
-        y += 1
-    '''
 
 #Movimentação Personagem        
     player_movement = [0, 0]
@@ -200,19 +177,25 @@ while True:
         player_y_momentum = 3
 
     if player_movement[0] > 0:
-        player_action,player_frame = change_action( player_action, player_frame, 'run' )
-        player_flip = False
+        player.set_action('run')
+        player.set_flip(False)
+        #player_action,player_frame = change_action( player_action, player_frame, 'run' )
+        #player_flip = False
     
     if player_movement[0] == 0:
-        player_action,player_frame = change_action( player_action, player_frame, 'idle' )
+        player.set_action('idle')
+        #player_action,player_frame = change_action( player_action, player_frame, 'idle' )
 
     
     if player_movement[0] < 0:
-        player_action,player_frame = change_action( player_action, player_frame, 'run' )
-        player_flip = True
+        player.set_action('run')
+        player.set_flip(True)
+        #player_action,player_frame = change_action( player_action, player_frame, 'run' )
+        #player_flip = True
 
-    player_rect, collisions = move( player_rect, player_movement, tile_rects )
-    if collisions['bottom']:
+    collision_types = player.move( player_movement, tile_rects )
+    #player_rect, collisions = move( player_rect, player_movement, tile_rects )
+    if collision_types['bottom']:
         player_y_momentum = 0
         air_timer = 0
         if player_movement[0] != 0:
@@ -222,14 +205,9 @@ while True:
     else:
         air_timer += 1
     
-
-    player_frame += 1
-    if player_frame >= len( animation_database[ player_action ] ):
-        player_frame = 0
-    player_img_id = animation_database[ player_action ][ player_frame ]
-    
-    player_image = animation_frames[player_img_id]
-    display.blit( pygame.transform.flip( player_image, player_flip, False), (player_rect.x - scroll[0], player_rect.y - scroll[1]) )
+    player.change_frame(1)
+    player.display(display,scroll)
+    #display.blit( pygame.transform.flip( player_image, player_flip, False), (player_rect.x - scroll[0], player_rect.y - scroll[1]) )
 
 
     surf = pygame.transform.scale(display, WINDOW_SIZE)

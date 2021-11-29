@@ -117,7 +117,7 @@ screen = pygame.display.set_mode(WINDOW_SIZE, 0,32) #
 
 display = pygame.Surface((300, 200))
 
-dirAtual = os.getcwd() + '\\Episode07\\assets\\'
+dirAtual = os.getcwd() + '\\assets\\'
 print( dirAtual )
 
 #player_image = pygame.image.load( r'D:\Projects\Pygame\Episode05\assets\player.png')
